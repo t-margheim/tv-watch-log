@@ -81,7 +81,7 @@ func getShowInfo(query string) contentInfo {
 		return contentInfo{}
 	}
 
-	slog.Info("Got TVDB response", "response", tvdbResp)
+	slog.Info("Queried TVDB", "results", len(tvdbResp.Data))
 
 	var usaData tvdbData
 	for _, data := range tvdbResp.Data {
@@ -167,10 +167,10 @@ func main() {
 		req.Messages = append(req.Messages, msg)
 		if len(msg.ToolCalls) > 0 {
 			toolCall := msg.ToolCalls[0]
-			slog.Info("Tool call", "toolCall", toolCall)
+			slog.Info("Tool called", "function_name", toolCall.Function.Name)
 			if toolCall.Function.Name == "get_show_info" {
 				rawArgs := toolCall.Function.Arguments
-				slog.Info("Tool call arguments", "args", rawArgs)
+				slog.Debug("Tool call arguments", "args", rawArgs)
 				var args toolArgs
 				err := json.Unmarshal([]byte(rawArgs), &args)
 				if err != nil {
@@ -178,6 +178,7 @@ func main() {
 					continue
 				}
 
+				slog.Info("Tool call arguments", "args", args)
 				info := getShowInfo(args.Query)
 				req.Messages = append(req.Messages, openai.ChatCompletionMessage{
 					Role: openai.ChatMessageRoleTool,
@@ -268,7 +269,7 @@ func writeToFile(viewDataRows []viewData) error {
 
 	for _, row := range viewDataRows {
 		row.date = getDateFromOffset(row.DaysOffset)
-		slog.Info("date set", "date", row.date, "days_offset", row.DaysOffset)
+		slog.Debug("date set", "date", row.date, "days_offset", row.DaysOffset)
 		_, err := file.WriteString(fmt.Sprintf(
 			"%s,%s,%s,%d\n",
 			row.date, row.Service, row.Title, row.WatchTime,
@@ -277,7 +278,8 @@ func writeToFile(viewDataRows []viewData) error {
 			return fmt.Errorf("failed to write to file: %w", err)
 		}
 
-		slog.Info("Wrote row to file",
+		slog.Info("Wrote row to file")
+		slog.Debug("Wrote row to file",
 			"date", row.date,
 			"service", row.Service,
 			"title", row.Title,
