@@ -1,13 +1,16 @@
 # Required libraries
 library(tidyverse)
 library(shiny)
+library(bslib)
 library(dplyr)
 library(ggplot2)
 library(DT)
 
-# Load your data
-watching_data <- read.csv("watching_data.csv") %>%
+
+# First load the data normally for UI initialization
+initial_data <- read.csv("watching_data.csv") %>%
   mutate(date = as.Date(date))
+
 service_costs <- read.csv("service_costs.csv")
 
 # UI
@@ -18,14 +21,14 @@ ui <- fluidPage(
     sidebarPanel(
       dateRangeInput("date_range",
                      "Select Date Range",
-                     start = min(watching_data$date),
+                     start = min(initial_data$date),
                      end = today()),
       
       # Modify the existing checkboxGroupInput
       checkboxGroupInput("services",
                   "Select Services",
-                  choices = unique(watching_data$service),
-                  selected = unique(watching_data$service)),
+                  choices = unique(initial_data$service),
+                  selected = unique(initial_data$service)),
                   
       
       hr(),
@@ -50,9 +53,24 @@ ui <- fluidPage(
 
 # Server
 server <- function(input, output, session) {
+  watching_data <- reactivePoll(
+    intervalMillis = 1000,  # Check every second
+    session = session,
+    checkFunc = function() {
+        # Return something that changes when your data changes
+        # For example, file modification time:
+        file.mtime("watching_data.csv")
+    },
+    valueFunc = function() {
+        # Load your data here
+        read.csv("watching_data.csv") %>%
+          mutate(date = as.Date(date))
+    }
+  )
+
   # Reactive data filtering
   filtered_data <- reactive({
-    watching_data %>%
+    watching_data() %>%
       filter(date >= input$date_range[1],
              date <= input$date_range[2],
              service %in% input$services)
