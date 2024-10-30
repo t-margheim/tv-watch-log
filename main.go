@@ -72,7 +72,7 @@ func getShowInfo(query string) contentInfo {
 		slog.Error("Error reading response body", "error", err)
 		return contentInfo{}
 	}
-	slog.Info("Response body", "body", string(respBody))
+	slog.Debug("Response body", "body", string(respBody))
 
 	var tvdbResp tvdbResponse
 	err = json.Unmarshal(respBody, &tvdbResp)
@@ -81,18 +81,21 @@ func getShowInfo(query string) contentInfo {
 		return contentInfo{}
 	}
 
+	slog.Info("Got TVDB response", "response", tvdbResp)
+
 	var usaData tvdbData
 	for _, data := range tvdbResp.Data {
-		if data.Country == "USA" {
+		if strings.EqualFold("usa", data.Country) {
 			usaData = data
 			break
 		}
 	}
-
-	return contentInfo{
+	ci := contentInfo{
 		Title:   usaData.Name,
 		Service: usaData.Network,
 	}
+	slog.Info("Got show info", "info", ci)
+	return ci
 }
 
 type toolArgs struct {
@@ -100,6 +103,7 @@ type toolArgs struct {
 }
 
 func main() {
+	slog.SetLogLoggerLevel(slog.LevelInfo)
 	ctx := context.Background()
 	err := godotenv.Load()
 	if err != nil {
@@ -136,7 +140,6 @@ func main() {
 			{
 				Role:    openai.ChatMessageRoleSystem,
 				Content: prompt,
-				// Content: "you are a helpful chatbot",
 			},
 		},
 		Tools: []openai.Tool{t},
@@ -198,7 +201,7 @@ func main() {
 			}
 		}
 
-		slog.Info("Response received", "response", resp)
+		slog.Debug("Response received", "response", resp)
 		responseText := resp.Choices[0].Message.Content
 
 		err = processMessage(responseText)
@@ -264,17 +267,18 @@ func writeToFile(viewDataRows []viewData) error {
 	defer file.Close()
 
 	for _, row := range viewDataRows {
-		row.Date = time.Now().AddDate(0, 0, row.DaysOffset).Format("2006-01-02")
+		row.date = getDateFromOffset(row.DaysOffset)
+		slog.Info("date set", "date", row.date, "days_offset", row.DaysOffset)
 		_, err := file.WriteString(fmt.Sprintf(
 			"%s,%s,%s,%d\n",
-			row.Date, row.Service, row.Title, row.WatchTime,
+			row.date, row.Service, row.Title, row.WatchTime,
 		))
 		if err != nil {
 			return fmt.Errorf("failed to write to file: %w", err)
 		}
 
 		slog.Info("Wrote row to file",
-			"date", row.Date,
+			"date", row.date,
 			"service", row.Service,
 			"title", row.Title,
 			"watch_time", row.WatchTime,
@@ -284,10 +288,14 @@ func writeToFile(viewDataRows []viewData) error {
 	return nil
 }
 
+func getDateFromOffset(offset int) string {
+	return time.Now().AddDate(0, 0, offset).Format("2006-01-02")
+}
+
 type viewData struct {
-	DaysOffset int
-	Date       string
-	Service    string
-	Title      string
-	WatchTime  int `json:"watch_time"`
+	DaysOffset int `json:"days_offset"`
+	date       string
+	Service    string `json:"service"`
+	Title      string `json:"title"`
+	WatchTime  int    `json:"watch_time"`
 }
