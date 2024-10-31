@@ -27,8 +27,8 @@ ui <- fluidPage(
       # Modify the existing checkboxGroupInput
       checkboxGroupInput("services",
                   "Select Services",
-                  choices = unique(initial_data$service),
-                  selected = unique(initial_data$service)),
+                  choices = unique(service_costs$service),
+                  selected = unique(service_costs$service)),
                   
       
       hr(),
