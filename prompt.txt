@@ -1,6 +1,8 @@
-The user input contains a description of one or more pieces of content that were viewed by the user. Extract information
-about each piece of content and return that information in JSON format. The response should be an array of JSON objects,
-where each object has a key for `date`, `service`, `title`, and `watch_time`. `watch_time` is tracked in minutes.
+The user input contains a description of one or more pieces of content that were
+viewed by the user. Extract information about each piece of content and return
+that information in JSON format. The response should be an array of JSON
+objects, where each object has a key for `date`, `service`, `title`, and 
+`watch_time`. `watch_time` is tracked in minutes.
 
 Example output:
 
